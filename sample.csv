@@ -1,0 +1,9 @@
+pH,pco2,hco3,na,cl,description
+7.40,40,24,140,104,Normal ABG
+7.25,20,10,140,100,DKA - metabolic acidosis with respiratory compensation
+7.28,60,26,140,102,Acute respiratory acidosis
+7.52,25,21,138,100,Respiratory alkalosis (hyperventilation)
+7.52,48,38,142,98,Metabolic alkalosis (vomiting)
+7.10,15,5,140,100,Severe lactic acidosis (septic shock)
+7.20,18,8,140,110,Mixed AG + non-AG acidosis (diarrhea + lactic)
+7.37,55,32,140,100,Fully compensated respiratory acidosis (COPD)
