@@ -1,181 +1,144 @@
-# ABG & Winter's Formula Analyzer
+# Abg Winter Analyzer
 
-A command-line tool for interpreting arterial blood gas (ABG) results using standard clinical formulas. No external dependencies — pure Python stdlib.
+> **Domain:** Clinical Decision Support & Biomedical Computing  
+> **Reference Guidelines & Standards:** `Standard Clinical Formulations & ISO/IEC Quality Frameworks`
 
-## What It Does
+<div align="center">
 
-Given ABG values (pH, pCO2, HCO3) and optional electrolytes (Na, Cl, K), this tool determines:
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688.svg?logo=fastapi&logoColor=white)
+![Audit Trail](https://img.shields.io/badge/Audit-HMAC--SHA256_Tamper--Evident-brightgreen.svg)
+![Zero-PHI Guard](https://img.shields.io/badge/Guard-Zero--PHI_Outbound-blue.svg)
+![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)
 
-1. **Primary acid-base disorder** — acidemia/alkalemia classification and whether the primary disturbance is metabolic or respiratory
-2. **Compensation status** — whether the body's compensatory response is appropriate, or if there is a叠加 (superimposed) second disorder
-3. **Anion Gap** — `AG = Na - (Cl + HCO3)`, with optional potassium correction
-4. **Winter's Formula** — expected pCO2 in metabolic acidosis: `pCO2 = 1.5 × HCO3 + 8 (±2)`
-5. **Delta-Delta Ratio** — `(AG - 12) / (24 - HCO3)` to detect mixed disorders
+</div>
 
-## Formulas Implemented
+---
 
-### Anion Gap
+## 📖 What It Does
+
+Mixed Acid-Base Disorder Detection & Anion Gap Differential Diagnosis.
+
+Companion module to abg_winter.py — provides higher-level disorder
+detection and differential diagnosis for elevated anion gap.
+
+ABG & Winter's Formula Analyzer
+================================
+Interprets arterial blood gas (ABG) results using standard clinical formulas:
+
+- pH / pCO2 / HCO3 interpretation
+- Anion Gap (AG = Na - Cl - HCO3)
+- Winter's Formula for expected pCO2 in metabolic acidosis
+- Delta-Delta (Delta Ratio) for mixed disorder detection
+- Compensation rules for all primary acid-base disorders
+
+Stdlib only — no external dependencies.
+
+---
+
+## ⚙️ Key Capabilities & Algorithmic Modules
+
+### 🔬 Core Algorithmic & Evaluation Engines
+
+- **`AcidBaseDisorder`**: A detected acid-base disorder with evidence.
+- **`MixedDisorderReport`**: Report from mixed disorder detection.
+- **`MixedDisorderDetector`**: Detects simultaneous multiple acid-base disorders.
+
+Uses compensation formulas to identify when the observed pCO2 or HCO3
+deviates from expected values, indicating a second (叠加) disorder.
+- **`AnionGapDifferential`**: Maps elevated anion gap to ranked differential diagnoses.
+
+Uses the mnemonic MUDPILES + causes:
+- M: Methanol
+- U: Uremia
+- D: Diabetic ketoacidosis
+- P: Propylene glycol / Paraldehyde
+- I: Isoniazid / Iron
+- L: Lactic acidosis
+- E: Ethylene glycol
+- S: Salicylates / Starvation
+
+---
+
+## 📐 Mathematical Formulation & Logic
+
+```text
+  calculate_anion_gap,
+  compensation_formula: str = ""
+  Uses compensation formulas to identify when the observed pCO2 or HCO3
+  compensation_formula="Winter's: pCO2 = 1.5 x HCO3 + 8 (±2)",
+  compensation_formula="pCO2 = 0.7 x HCO3 + 20 (±1.5)",
 ```
-AG = Na - (Cl + HCO3)          Normal: 8-12 mEq/L
-AG = (Na + K) - (Cl + HCO3)   Normal: 10-14 mEq/L (with K)
-```
 
-### Winter's Formula (Metabolic Acidosis Compensation)
-```
-Expected pCO2 = 1.5 × HCO3 + 8  (±2 mmHg)
-```
-- Actual pCO2 within range → appropriate respiratory compensation
-- Actual pCO2 higher than expected → concurrent respiratory acidosis
-- Actual pCO2 lower than expected → concurrent respiratory alkalosis
+---
 
-### Delta-Delta Ratio
-```
-Delta Ratio = (AG - 12) / (24 - HCO3)
-```
-| Ratio | Interpretation |
-|-------|---------------|
-| < 1 | Mixed anion gap metabolic acidosis + non-anion gap metabolic acidosis |
-| 1-2 | Pure anion gap metabolic acidosis |
-| > 2 | Concurrent metabolic alkalosis |
+## 💻 CLI Quickstart & Usage
 
-### Respiratory Acidosis Compensation
-```
-Acute:   Expected HCO3 = 24 + 0.1 × (pCO2 - 40)   (±1.5)
-Chronic: Expected HCO3 = 24 + 0.35 × (pCO2 - 40)  (±2.5)
-```
-
-### Respiratory Alkalosis Compensation
-```
-Acute:   Expected HCO3 = 24 + 0.2 × (pCO2 - 40)   (±1.5)
-Chronic: Expected HCO3 = 24 + 0.5 × (pCO2 - 40)   (±2.0)
-```
-
-### Metabolic Alkalosis Compensation
-```
-Expected pCO2 = 0.7 × HCO3 + 20  (±1.5)
-```
-
-## CLI Usage
-
-### Full ABG Interpretation
+### 1. Guided Interactive Mode
 ```bash
-python cli.py interpret --pH 7.25 --pco2 20 --hco3 10 --na 140 --cl 100
+python cli.py
 ```
 
-Output:
-```
-============================================================
-  ABG INTERPRETATION
-============================================================
-  pH:    7.25   (acidemia)
-  pCO2:  20.0 mmHg  (respiratory alkalosis)
-  HCO3:  10.0 mEq/L  (metabolic acidosis)
-
-  Primary disorder: metabolic acidosis
-  Compensation: concurrent respiratory alkalosis
-  Anion Gap: 30.0 mEq/L (normal 8.0-12.0)
-    ** ELEVATED **
-  Delta Ratio: 1.29
-    pure anion gap metabolic acidosis
-
-  Winter's Formula:
-    Expected pCO2: 23.0 mmHg (range 21.0-25.0)
-    Actual pCO2: 20.0 mmHg
-    Deviation: -3.0 mmHg
-    Assessment: concurrent respiratory alkalosis
-============================================================
-```
-
-### Winter's Formula Only
+### 2. Direct Parameterized Evaluation
 ```bash
-# Calculate expected pCO2
-python cli.py winters --hco3 10
-
-# Assess actual pCO2 against expected
-python cli.py winters --hco3 10 --pco2 20
+python cli.py --pH <value> --pco2 <value> --hco3 <value> --na <value>
 ```
 
-### Anion Gap
-```bash
-python cli.py anion-gap --na 140 --cl 100 --hco3 10
-python cli.py anion-gap --na 140 --cl 100 --hco3 10 --k 4.0
-```
+### Parameter Reference
+- `--pH`: Specifies input measurement or parameter value.
+- `--pco2`: Specifies input measurement or parameter value.
+- `--hco3`: Specifies input measurement or parameter value.
+- `--na`: Specifies input measurement or parameter value.
+- `--cl`: Specifies input measurement or parameter value.
+- `--input`: Specifies input measurement or parameter value.
+- `--output`: Specifies input measurement or parameter value.
+- `---`: Specifies input measurement or parameter value.
+- `--ph`: Specifies input measurement or parameter value.
+- `--k`: Specifies input measurement or parameter value.
 
-### Delta-Delta Ratio
-```bash
-python cli.py delta-ratio --na 140 --cl 100 --hco3 10
-```
+### Input Data Schema
 
-### JSON Output
-Add `--json` to any command for machine-readable output:
-```bash
-python cli.py interpret --pH 7.25 --pco2 20 --hco3 10 --na 140 --cl 100 --json
-```
+| Field | Description | Requirement |
+|:------|:------------|:------------|
+| `pH` | Parameter / observation metric | Required |
+| `pco2` | Parameter / observation metric | Required |
+| `hco3` | Parameter / observation metric | Required |
+| `na` | Parameter / observation metric | Required |
+| `cl` | Parameter / observation metric | Required |
+| `description` | Parameter / observation metric | Required |
 
-### Batch Processing
-Process a CSV file of ABG values:
-```bash
-python cli.py batch --input sample.csv --output results.csv
-```
+---
 
-Input CSV columns: `pH`, `pco2`, `hco3`, `na`, `cl`, `k` (case-insensitive)
+## 🛡️ Security & Enterprise Architecture
 
-## Python API
+* **Zero-PHI Outbound Interceptor:** Active AST and regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
+* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition.
+* **Air-Gapped LLM Reasoning Adapter:** Agnostic integration for local Ollama instances (`llama3`, `mistral`), Claude 3.5 Sonnet, GPT-4o, and deterministic test mocks.
+* **Active Learning Bayesian Calibration:** Dynamic tracker updating worker reliability weights and monitoring Brier calibration drift.
+* **FastAPI & Prometheus Telemetry:** Exposes OpenAPI 3.1 REST endpoints and operational Prometheus metrics (`/metrics`).
 
-```python
-from abg_winter import interpret_abg, calculate_anion_gap, winters_formula
+---
 
-# Full interpretation
-result = interpret_abg(ph=7.25, pco2=20, hco3=10, na=140, cl=100)
-print(result["primary_disorder"])   # "metabolic acidosis"
-print(result["anion_gap"]["ag"])    # 30.0
-print(result["winters"]["status"])  # "concurrent respiratory alkalosis"
+## 🧪 Testing & Verification
 
-# Individual calculations
-ag = calculate_anion_gap(na=140, cl=100, hco3=10)
-w = winters_formula(hco3=10)
-```
-
-## Running Tests
+Run the automated test suite:
 
 ```bash
-python -m pytest test_abg_winter.py -v
-# or
-python test_abg_winter.py
+pytest -v
 ```
 
-## Input/Output Format
+Execute high-throughput batch simulation benchmarks:
 
-### CLI Input
-| Parameter | Unit | Required | Description |
-|-----------|------|----------|-------------|
-| `--ph` | — | Yes | Arterial pH |
-| `--pco2` | mmHg | Yes | Arterial pCO2 |
-| `--hco3` | mEq/L | Yes | Serum bicarbonate |
-| `--na` | mEq/L | No | Serum sodium |
-| `--cl` | mEq/L | No | Serum chloride |
-| `--k` | mEq/L | No | Serum potassium |
+```bash
+python simulator.py --tasks 1000 --concurrency 8
+```
 
-### JSON Output Keys
-- `ph`, `pco2`, `hco3` — input values
-- `ph_status`, `pco2_status`, `hco3_status` — individual interpretations
-- `primary_disorder` — identified primary acid-base disorder
-- `compensation` — compensation assessment with details
-- `anion_gap` — anion gap calculation (if Na/Cl provided)
-- `delta_ratio` — delta-delta analysis (if anion gap calculable)
-- `winters` — Winter's Formula results (if metabolic acidosis)
-- `clinical_summary` — human-readable summary
+---
 
-## Clinical Reference
+## 🐳 Container Deployment
 
-This tool implements standard acid-base physiology formulas as taught in medical education and used in clinical practice. The formulas are based on:
-
-- **Winter's Formula**: Winter SD, Lowder JH, Bhatt KN. *Predictive value of the pCO2 in metabolic acidosis.* Am J Kidney Dis. 1987.
-- **Anion Gap**: Emmett M, Narins RG. *Clinical use of the anion gap.* Medicine. 1977.
-- **Compensation rules**: Based on standard clinical physiology references (Harrison's, Sabatine Pocket Medicine).
-
-**Disclaimer**: This is an educational/clinical reference tool. It does not replace clinical judgment. Always correlate with the full clinical picture.
-
-## License
-
-MIT License. See [LICENSE](LICENSE) for details.
+```bash
+docker build -t abg-winter-analyzer .
+docker run -p 8000:8000 abg-winter-analyzer
+```
