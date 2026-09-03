@@ -175,7 +175,7 @@ def build_parser():
     p_interp = subparsers.add_parser(
         "interpret", help="Full ABG interpretation with anion gap and compensation"
     )
-    p_interp.add_argument("--ph", type=float, required=True, help="Arterial pH")
+    p_interp.add_argument("--ph", "--pH", dest="ph", type=float, required=True, help="Arterial pH")
     p_interp.add_argument("--pco2", type=float, required=True, help="pCO2 in mmHg")
     p_interp.add_argument("--hco3", type=float, required=True, help="HCO3 in mEq/L")
     p_interp.add_argument("--na", type=float, default=None, help="Sodium in mEq/L")

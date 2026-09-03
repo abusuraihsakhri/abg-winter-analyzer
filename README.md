@@ -1,144 +1,114 @@
-# Abg Winter Analyzer
+# Arterial Blood Gas (ABG) & Winter's Formula Analyzer
 
-> **Domain:** Clinical Decision Support & Biomedical Computing  
-> **Reference Guidelines & Standards:** `Standard Clinical Formulations & ISO/IEC Quality Frameworks`
+A Python clinical acid-base interpretation library and CLI tool. Evaluates arterial blood gas values, anion gap, compensation mechanisms, delta-delta ratios, mixed disorders, and differential diagnoses using standard clinical formulas.
 
-<div align="center">
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688.svg?logo=fastapi&logoColor=white)
-![Audit Trail](https://img.shields.io/badge/Audit-HMAC--SHA256_Tamper--Evident-brightgreen.svg)
-![Zero-PHI Guard](https://img.shields.io/badge/Guard-Zero--PHI_Outbound-blue.svg)
-![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)
-
-</div>
+Requires Python standard library only (zero external runtime dependencies).
 
 ---
 
-## 📖 What It Does
+## Features
 
-Mixed Acid-Base Disorder Detection & Anion Gap Differential Diagnosis.
-
-Companion module to abg_winter.py — provides higher-level disorder
-detection and differential diagnosis for elevated anion gap.
-
-ABG & Winter's Formula Analyzer
-================================
-Interprets arterial blood gas (ABG) results using standard clinical formulas:
-
-- pH / pCO2 / HCO3 interpretation
-- Anion Gap (AG = Na - Cl - HCO3)
-- Winter's Formula for expected pCO2 in metabolic acidosis
-- Delta-Delta (Delta Ratio) for mixed disorder detection
-- Compensation rules for all primary acid-base disorders
-
-Stdlib only — no external dependencies.
+- **Full ABG Interpretation:** Classifies arterial pH, $\text{pCO}_2$, and $\text{HCO}_3$ into primary disorders (metabolic/respiratory acidosis and alkalosis, fully compensated states, and mixed disorders).
+- **Winter's Formula:** Evaluates respiratory compensation in metabolic acidosis:
+  $$\text{Expected pCO}_2 = 1.5 \times \text{HCO}_3 + 8 \pm 2\text{ mmHg}$$
+- **Anion Gap & Albumin Correction:** Calculates standard and potassium-corrected anion gap, as well as albumin-adjusted anion gap using the Figge formulation:
+  $$\text{AG} = \text{Na}^+ - (\text{Cl}^- + \text{HCO}_3^-)$$
+  $$\text{AG}_{\text{corrected}} = \text{AG} + 2.5 \times (4.0 - \text{Albumin})$$
+- **Delta-Delta (Delta Ratio):** Identifies concurrent metabolic disorders in anion-gap metabolic acidosis:
+  $$\Delta\text{-}\text{Ratio} = \frac{\text{AG} - 12}{24 - \text{HCO}_3}$$
+- **Mixed Disorder Detection:** Multi-pathway compensation verification across acute and chronic respiratory disorders and metabolic alkalosis.
+- **MUDPILES Differential Diagnosis:** Ranked differential diagnoses for elevated anion gap based on laboratory markers (lactate, glucose, BUN, etc.).
+- **Batch Processing:** High-throughput batch processing of CSV records.
 
 ---
 
-## ⚙️ Key Capabilities & Algorithmic Modules
+## Installation & Requirements
 
-### 🔬 Core Algorithmic & Evaluation Engines
+- Python 3.10+ (tested on 3.10, 3.11, 3.12)
+- Zero external runtime dependencies. `pytest` is optional for running tests.
 
-- **`AcidBaseDisorder`**: A detected acid-base disorder with evidence.
-- **`MixedDisorderReport`**: Report from mixed disorder detection.
-- **`MixedDisorderDetector`**: Detects simultaneous multiple acid-base disorders.
-
-Uses compensation formulas to identify when the observed pCO2 or HCO3
-deviates from expected values, indicating a second (叠加) disorder.
-- **`AnionGapDifferential`**: Maps elevated anion gap to ranked differential diagnoses.
-
-Uses the mnemonic MUDPILES + causes:
-- M: Methanol
-- U: Uremia
-- D: Diabetic ketoacidosis
-- P: Propylene glycol / Paraldehyde
-- I: Isoniazid / Iron
-- L: Lactic acidosis
-- E: Ethylene glycol
-- S: Salicylates / Starvation
-
----
-
-## 📐 Mathematical Formulation & Logic
-
-```text
-  calculate_anion_gap,
-  compensation_formula: str = ""
-  Uses compensation formulas to identify when the observed pCO2 or HCO3
-  compensation_formula="Winter's: pCO2 = 1.5 x HCO3 + 8 (±2)",
-  compensation_formula="pCO2 = 0.7 x HCO3 + 20 (±1.5)",
+```bash
+git clone https://github.com/abusuraihsakhri/abg-winter-analyzer.git
+cd abg-winter-analyzer
 ```
 
 ---
 
-## 💻 CLI Quickstart & Usage
+## CLI Usage
 
-### 1. Guided Interactive Mode
+### 1. Full ABG Interpretation
 ```bash
-python cli.py
+python cli.py interpret --ph 7.25 --pco2 20 --hco3 10 --na 140 --cl 100
+```
+Output as JSON:
+```bash
+python cli.py interpret --ph 7.25 --pco2 20 --hco3 10 --na 140 --cl 100 --json
 ```
 
-### 2. Direct Parameterized Evaluation
+### 2. Winter's Formula Calculation
+Calculate expected $\text{pCO}_2$ or evaluate compensation:
 ```bash
-python cli.py --pH <value> --pco2 <value> --hco3 <value> --na <value>
+python cli.py winters --hco3 10
+python cli.py winters --hco3 10 --pco2 25
 ```
 
-### Parameter Reference
-- `--pH`: Specifies input measurement or parameter value.
-- `--pco2`: Specifies input measurement or parameter value.
-- `--hco3`: Specifies input measurement or parameter value.
-- `--na`: Specifies input measurement or parameter value.
-- `--cl`: Specifies input measurement or parameter value.
-- `--input`: Specifies input measurement or parameter value.
-- `--output`: Specifies input measurement or parameter value.
-- `---`: Specifies input measurement or parameter value.
-- `--ph`: Specifies input measurement or parameter value.
-- `--k`: Specifies input measurement or parameter value.
+### 3. Anion Gap Calculation
+```bash
+python cli.py anion-gap --na 140 --cl 100 --hco3 10
+python cli.py anion-gap --na 140 --cl 100 --hco3 10 --k 4.0
+```
 
-### Input Data Schema
+### 4. Delta-Delta Ratio
+```bash
+python cli.py delta-ratio --na 140 --cl 100 --hco3 10
+```
 
-| Field | Description | Requirement |
-|:------|:------------|:------------|
-| `pH` | Parameter / observation metric | Required |
-| `pco2` | Parameter / observation metric | Required |
-| `hco3` | Parameter / observation metric | Required |
-| `na` | Parameter / observation metric | Required |
-| `cl` | Parameter / observation metric | Required |
-| `description` | Parameter / observation metric | Required |
+### 5. Batch CSV Processing
+```bash
+python cli.py batch --input sample.csv --output results.csv
+```
 
 ---
 
-## 🛡️ Security & Enterprise Architecture
+## Python API Quickstart
 
-* **Zero-PHI Outbound Interceptor:** Active AST and regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
-* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition.
-* **Air-Gapped LLM Reasoning Adapter:** Agnostic integration for local Ollama instances (`llama3`, `mistral`), Claude 3.5 Sonnet, GPT-4o, and deterministic test mocks.
-* **Active Learning Bayesian Calibration:** Dynamic tracker updating worker reliability weights and monitoring Brier calibration drift.
-* **FastAPI & Prometheus Telemetry:** Exposes OpenAPI 3.1 REST endpoints and operational Prometheus metrics (`/metrics`).
+```python
+from abg_winter import interpret_abg, winters_formula, calculate_anion_gap
+from abg_disorders import MixedDisorderDetector, AnionGapDifferential
+
+# 1. Full interpretation
+result = interpret_abg(ph=7.25, pco2=20.0, hco3=10.0, na=140.0, cl=100.0)
+print(result["primary_disorder"])   # "metabolic acidosis"
+print(result["clinical_summary"])
+
+# 2. Mixed disorder detection
+detector = MixedDisorderDetector()
+report = detector.detect(ph=7.25, pco2=20.0, hco3=10.0, na=140.0, cl=100.0, albumin=4.0)
+print(report.narrative)
+
+# 3. Anion gap differential diagnosis
+diff = AnionGapDifferential()
+causes = diff.diagnose(ag=28.0, lactate=6.5)
+for item in causes[:3]:
+    print(f"- {item['cause']}: score {item['score']} ({item['workup']})")
+```
 
 ---
 
-## 🧪 Testing & Verification
+## Running Tests
 
-Run the automated test suite:
+Run the test suite via standard `unittest` or `pytest`:
 
 ```bash
+# Using standard Python unittest
+python -m unittest discover
+
+# Using pytest
 pytest -v
 ```
 
-Execute high-throughput batch simulation benchmarks:
-
-```bash
-python simulator.py --tasks 1000 --concurrency 8
-```
-
 ---
 
-## 🐳 Container Deployment
+## License
 
-```bash
-docker build -t abg-winter-analyzer .
-docker run -p 8000:8000 abg-winter-analyzer
-```
+MIT License. See [LICENSE](LICENSE) for details.

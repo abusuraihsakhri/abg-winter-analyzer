@@ -71,9 +71,9 @@ class MixedDisorderDetector:
         """
         disorders = []
 
-        # Corrected anion gap for albumin
-        corrected_cl = cl + 0.6 * (3.5 - albumin) if albumin else cl
-        ag = na - corrected_cl - hco3
+        # Baseline Anion Gap and Albumin-corrected Anion Gap (Figge formula)
+        raw_ag = na - cl - hco3
+        ag = raw_ag + 2.5 * (4.0 - albumin) if albumin is not None else raw_ag
         delta_gap = ag - 12.0
 
         # Avoid division by zero
@@ -249,19 +249,19 @@ class AnionGapDifferential:
 
     CAUSES = [
         {"name": "Lactic acidosis", "condition": lambda lactate, **kw: lactate and lactate > 4.0,
-         "weight": 0.9, "workup": "Serum lactate, blood cultures, tissue perfusion assessment"},
+         "weight": 0.6, "workup": "Serum lactate, blood cultures, tissue perfusion assessment"},
         {"name": "Diabetic ketoacidosis", "condition": lambda glucose, **kw: glucose and glucose > 250,
-         "weight": 0.85, "workup": "Blood glucose, serum ketones, urine ketones, VBG"},
+         "weight": 0.6, "workup": "Blood glucose, serum ketones, urine ketones, VBG"},
         {"name": "Uremia", "condition": lambda bun, **kw: bun and bun > 60,
-         "weight": 0.7, "workup": "BUN, creatinine, renal ultrasound"},
+         "weight": 0.6, "workup": "BUN, creatinine, renal ultrasound"},
         {"name": "Methanol ingestion", "condition": lambda **kw: True,
-         "weight": 0.5, "workup": "Osmol gap, methanol level, ethanol level"},
+         "weight": 0.4, "workup": "Osmol gap, methanol level, ethanol level"},
         {"name": "Ethylene glycol ingestion", "condition": lambda **kw: True,
-         "weight": 0.5, "workup": "Osmol gap, ethylene glycol level, urine calcium oxalate crystals"},
+         "weight": 0.4, "workup": "Osmol gap, ethylene glycol level, urine calcium oxalate crystals"},
         {"name": "Salicylate toxicity", "condition": lambda ph, **kw: ph and ph < 7.4,
-         "weight": 0.5, "workup": "Salicylate level, arterial blood gas"},
+         "weight": 0.4, "workup": "Salicylate level, arterial blood gas"},
         {"name": "Alcoholic ketoacidosis", "condition": lambda **kw: True,
-         "weight": 0.6, "workup": "Serum ketones, alcohol level, glucose"},
+         "weight": 0.5, "workup": "Serum ketones, alcohol level, glucose"},
         {"name": "Starvation ketosis", "condition": lambda **kw: True,
          "weight": 0.3, "workup": "Serum ketones, dietary history"},
     ]
