@@ -16,3 +16,7 @@ results.csv
 output.csv
 .DS_Store
 Thumbs.db
+*.csv.bak
+*.swp
+*.swo
+*~

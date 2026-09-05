@@ -18,6 +18,15 @@ from abg_winter import (
     assess_compensation_metabolic_alkalosis,
     interpret_row,
     process_csv,
+    # Validation functions
+    validate_ph,
+    validate_pco2,
+    validate_hco3,
+    validate_na,
+    validate_cl,
+    validate_k,
+    validate_albumin,
+    ABGValidationError,
 )
 
 __all__ = [
@@ -34,4 +43,13 @@ __all__ = [
     "assess_compensation_metabolic_alkalosis",
     "interpret_row",
     "process_csv",
+    # Validation functions
+    "validate_ph",
+    "validate_pco2",
+    "validate_hco3",
+    "validate_na",
+    "validate_cl",
+    "validate_k",
+    "validate_albumin",
+    "ABGValidationError",
 ]

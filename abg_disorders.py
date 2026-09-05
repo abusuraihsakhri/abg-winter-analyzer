@@ -17,6 +17,13 @@ from abg_winter import (
     interpret_ph,
     interpret_pco2,
     interpret_hco3,
+    validate_ph,
+    validate_pco2,
+    validate_hco3,
+    validate_na,
+    validate_cl,
+    validate_albumin,
+    ABGValidationError,
 )
 
 
@@ -68,7 +75,20 @@ class MixedDisorderDetector:
         Returns
         -------
         MixedDisorderReport with detected disorders and analysis.
+
+        Raises
+        ------
+        ABGValidationError
+            If any value is outside physiologically plausible range.
         """
+        # Validate all parameters
+        validate_ph(ph)
+        validate_pco2(pco2)
+        validate_hco3(hco3)
+        validate_na(na)
+        validate_cl(cl)
+        validate_albumin(albumin)
+
         disorders = []
 
         # Baseline Anion Gap and Albumin-corrected Anion Gap (Figge formula)
@@ -282,7 +302,15 @@ class AnionGapDifferential:
         Returns
         -------
         List of dicts with cause, score, and workup.
+
+        Raises
+        ------
+        ABGValidationError
+            If pH is outside physiologically plausible range.
         """
+        # Validate pH (always provided, used for salicylate toxicity check)
+        validate_ph(ph)
+
         if ag <= 12:
             return [{"cause": "Normal anion gap — no gap acidosis",
                      "score": 1.0, "workup": "Consider non-anion gap acidosis (diarrhea, RTA)"}]

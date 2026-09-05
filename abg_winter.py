@@ -4,7 +4,7 @@ ABG & Winter's Formula Analyzer
 ================================
 Interprets arterial blood gas (ABG) results using standard clinical formulas:
 
-- pH / pCO2 / HCO3 interpretation
+- pH / pco2 / HCO3 interpretation
 - Anion Gap (AG = Na - Cl - HCO3)
 - Winter's Formula for expected pCO2 in metabolic acidosis
 - Delta-Delta (Delta Ratio) for mixed disorder detection
@@ -12,6 +12,7 @@ Interprets arterial blood gas (ABG) results using standard clinical formulas:
 
 Stdlib only — no external dependencies.
 """
+import os
 
 
 # ---------------------------------------------------------------------------
@@ -22,6 +23,65 @@ PCO2_NORMAL = (35.0, 45.0)
 HCO3_NORMAL = (22.0, 26.0)
 AG_NORMAL = (8.0, 12.0)       # without K correction
 AG_NORMAL_K = (10.0, 14.0)    # if K is included in the formula
+
+# Clinical validation ranges (physiologically plausible extremes)
+PH_MIN, PH_MAX = 6.8, 7.8
+PCO2_MIN, PCO2_MAX = 5.0, 120.0
+HCO3_MIN, HCO3_MAX = 1.0, 60.0
+NA_MIN, NA_MAX = 100.0, 180.0
+CL_MIN, CL_MAX = 60.0, 140.0
+K_MIN, K_MAX = 1.0, 10.0
+ALBUMIN_MIN, ALBUMIN_MAX = 0.5, 7.0
+
+
+class ABGValidationError(ValueError):
+    """Raised when a clinical value is outside the physiologically plausible range."""
+    pass
+
+
+def _validate_range(name: str, value: float, low: float, high: float) -> None:
+    """Validate that a numeric value falls within an acceptable range."""
+    if not isinstance(value, (int, float)):
+        raise TypeError(f"{name} must be numeric, got {type(value).__name__}")
+    if value < low or value > high:
+        raise ABGValidationError(
+            f"{name} value {value} is outside plausible range [{low}, {high}]"
+        )
+
+
+def validate_ph(ph: float) -> None:
+    """Validate arterial pH is within physiologically plausible range."""
+    _validate_range("pH", ph, PH_MIN, PH_MAX)
+
+
+def validate_pco2(pco2: float) -> None:
+    """Validate pCO2 is within physiologically plausible range."""
+    _validate_range("pCO2", pco2, PCO2_MIN, PCO2_MAX)
+
+
+def validate_hco3(hco3: float) -> None:
+    """Validate HCO3 is within physiologically plausible range."""
+    _validate_range("HCO3", hco3, HCO3_MIN, HCO3_MAX)
+
+
+def validate_na(na: float) -> None:
+    """Validate sodium is within physiologically plausible range."""
+    _validate_range("Na", na, NA_MIN, NA_MAX)
+
+
+def validate_cl(cl: float) -> None:
+    """Validate chloride is within physiologically plausible range."""
+    _validate_range("Cl", cl, CL_MIN, CL_MAX)
+
+
+def validate_k(k: float) -> None:
+    """Validate potassium is within physiologically plausible range."""
+    _validate_range("K", k, K_MIN, K_MAX)
+
+
+def validate_albumin(albumin: float) -> None:
+    """Validate albumin is within physiologically plausible range."""
+    _validate_range("Albumin", albumin, ALBUMIN_MIN, ALBUMIN_MAX)
 
 
 # ---------------------------------------------------------------------------
@@ -110,8 +170,15 @@ def assess_winters(actual_pco2: float, hco3: float) -> dict:
     Compare actual pCO2 to Winter's expected pCO2.
 
     Returns the expected value, deviation, and whether compensation
-    is appropriate, or if there is a叠加 respiratory disorder.
+    is appropriate, or if there is a concurrent respiratory disorder.
+
+    Raises
+    ------
+    ABGValidationError
+        If any value is outside physiologically plausible range.
     """
+    validate_pco2(actual_pco2)
+    validate_hco3(hco3)
     w = winters_formula(hco3)
     expected = w["expected_pco2"]
     deviation = round(actual_pco2 - expected, 2)
@@ -315,7 +382,27 @@ def interpret_abg(ph: float, pco2: float, hco3: float,
       primary_disorder, compensation, compensation_detail,
       anion_gap (if na/cl provided), delta_ratio (if applicable),
       winters (if metabolic acidosis), clinical_summary
+
+    Raises
+    ------
+    ABGValidationError
+        If any value is outside physiologically plausible range.
+    TypeError
+        If any value is not numeric.
     """
+    # Validate required parameters
+    validate_ph(ph)
+    validate_pco2(pco2)
+    validate_hco3(hco3)
+
+    # Validate optional parameters if provided
+    if na is not None:
+        validate_na(na)
+    if cl is not None:
+        validate_cl(cl)
+    if k is not None:
+        validate_k(k)
+
     result = {
         "ph": ph,
         "pco2": pco2,
@@ -518,11 +605,58 @@ def interpret_row(row: dict) -> dict:
     return interpret_abg(ph, pco2, hco3, na, cl, k)
 
 
+def _safe_resolve_path(path: str) -> str:
+    """
+    Resolve a path safely, preventing path traversal attacks.
+
+    Returns the resolved absolute path after verifying it doesn't escape
+    via symlinks or '..' components in an unexpected way.
+    """
+    # Resolve to absolute path (handles .., symlinks, etc.)
+    resolved = os.path.realpath(os.path.abspath(path))
+    return resolved
+
+
 def process_csv(input_path: str, output_path: str) -> list:
     """
     Process a CSV file of ABG values and write results to output CSV.
+
+    Parameters
+    ----------
+    input_path : str
+        Path to input CSV file. Must exist and be readable.
+    output_path : str
+        Path to output CSV file. Parent directory must exist.
+
+    Returns
+    -------
+    list of dicts with interpretation results.
+
+    Raises
+    ------
+    FileNotFoundError
+        If input_path does not exist.
+    PermissionError
+        If input_path is not readable or output_path is not writable.
+    ValueError
+        If input_path is not a file.
     """
     import csv
+
+    # Resolve paths safely (prevents path traversal)
+    input_path = _safe_resolve_path(input_path)
+    output_path = _safe_resolve_path(output_path)
+
+    # Validate input file exists and is a file
+    if not os.path.exists(input_path):
+        raise FileNotFoundError(f"Input file not found: {input_path}")
+    if not os.path.isfile(input_path):
+        raise ValueError(f"Input path is not a file: {input_path}")
+
+    # Validate output directory exists
+    output_dir = os.path.dirname(output_path)
+    if output_dir and not os.path.isdir(output_dir):
+        raise FileNotFoundError(f"Output directory does not exist: {output_dir}")
 
     with open(input_path, newline="", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)

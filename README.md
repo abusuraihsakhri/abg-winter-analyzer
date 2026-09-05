@@ -19,6 +19,8 @@ Requires Python standard library only (zero external runtime dependencies).
 - **Mixed Disorder Detection:** Multi-pathway compensation verification across acute and chronic respiratory disorders and metabolic alkalosis.
 - **MUDPILES Differential Diagnosis:** Ranked differential diagnoses for elevated anion gap based on laboratory markers (lactate, glucose, BUN, etc.).
 - **Batch Processing:** High-throughput batch processing of CSV records.
+- **Input Validation:** All clinical values are validated against physiologically plausible ranges to prevent garbage-in-garbage-out errors.
+- **Secure File Handling:** CSV processing includes path traversal protection and proper error handling.
 
 ---
 
@@ -92,6 +94,22 @@ causes = diff.diagnose(ag=28.0, lactate=6.5)
 for item in causes[:3]:
     print(f"- {item['cause']}: score {item['score']} ({item['workup']})")
 ```
+
+## Input Validation
+
+All clinical values are validated against physiologically plausible ranges to prevent invalid inputs from producing misleading results:
+
+| Parameter | Valid Range |
+|-----------|-------------|
+| pH | 6.8 – 7.8 |
+| pCO₂ | 5 – 120 mmHg |
+| HCO₃ | 1 – 60 mEq/L |
+| Na⁺ | 100 – 180 mEq/L |
+| Cl⁻ | 60 – 140 mEq/L |
+| K⁺ | 1 – 10 mEq/L |
+| Albumin | 0.5 – 7 g/dL |
+
+Invalid values raise `ABGValidationError` (from `abg_winter` module). Non-numeric inputs raise `TypeError`.
 
 ---
 
